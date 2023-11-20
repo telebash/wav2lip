@@ -2,9 +2,10 @@
 
 slightly modified to run as a Silly Tavern extension by https://github.com/Mozer
 
-Full info about extension is here: https://github.com/Mozer/wav2lip_extension
+Full info about this ST extension is here: https://github.com/Mozer/wav2lip_extension
 
 
+## original readme
 
 Are you looking to integrate this into a product? We have a turn-key hosted API with new and improved lip-syncing models here: https://synclabs.so/
 
