@@ -1,5 +1,11 @@
 # **Wav2Lip**: *Accurately Lip-syncing Videos In The Wild*
 
+slightly modified to run as a Silly Tavern extension by https://github.com/Mozer
+
+Full info about extension is here: https://github.com/Mozer/wav2lip_extension
+
+
+
 Are you looking to integrate this into a product? We have a turn-key hosted API with new and improved lip-syncing models here: https://synclabs.so/
 
 For any other commercial licenscing requests, please contact us at radrabha.m@research.iiit.ac.in or prajwal.k@research.iiit.ac.in.
