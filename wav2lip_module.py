@@ -7,6 +7,8 @@ from glob import glob
 import torch, modules.wav2lip.face_detection as face_detection
 from modules.wav2lip.models import Wav2Lip
 import platform, time
+import pickle
+from pathlib import Path
 
 '''
 from functools import wraps
@@ -131,19 +133,46 @@ def face_detect(images, args):
 	del detector
 	return results 
 
+def face_detect_with_cache(images, args, input_video_fname, mel_chunks_len):
+	# Check if cache exists
+	cache_path = f"{Path(__file__).parent}/cache/face_detection/{input_video_fname}.pkl"
+	if not Path(cache_path).exists():
+		print("Face detection cache "+input_video_fname+".pkl doesn't exist, calling face detect")
+		faces = face_detect(images, args)
+		
+		# Save encoded faces to cache file
+		with open(cache_path, "wb") as f:
+			pickle.dump(faces, f)
+	
+	else:
+		# Load cached faces from file
+		print("Load cached faces from file "+input_video_fname+".pkl")
+		with open(cache_path, "rb") as f:
+			faces = pickle.load(f)
+	
+	faces = faces[:mel_chunks_len]
+    
+	return faces
+
+
 def datagen(frames, mels, args):
+	#print ("datagen input params:")
+	#print (frames)
+	#print (mels)
 	img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
 
+	print(str(time.time())+" Before face detection")
 	if args.box[0] == -1:
 		if not args.static:
-			face_det_results = face_detect(frames, args) # BGR2RGB for CNN face detection
+			face_det_results = face_detect_with_cache(frames, args, os.path.basename(args.face), len(mels)) # BGR2RGB for CNN face detection
 		else:
-			face_det_results = face_detect([frames[0]], args)
+			face_det_results = face_detect_with_cache([frames[0]], args, os.path.basename(args.face), len(mels))
 	else:
 		print('Using the specified bounding box instead of face detection...')
 		y1, y2, x1, x2 = args.box
 		face_det_results = [[f[y1: y2, x1:x2], (y1, y2, x1, x2)] for f in frames]
 
+	print(str(time.time())+" after face detection")
 	for i, m in enumerate(mels):
 		idx = 0 if args.static else i%len(frames)
 		frame_to_save = frames[idx].copy()
@@ -205,7 +234,7 @@ def load_model(path):
 	return model.eval()
 
 def wav2lip_main(args):
-	print("wav2lip_main")
+	print(str(time.time())+" wav2lip_main")
 	print(args)
 	start_time = time.time()
 	if os.path.isfile(args.face) and args.face.split('.')[1] in ['jpg', 'png', 'jpeg']:
@@ -224,7 +253,7 @@ def wav2lip_main(args):
 		fps = video_stream.get(cv2.CAP_PROP_FPS)
 		#fps = args.fps
 
-		print('Reading video frames...')
+		print(str(time.time())+' Reading video frames...')
 
 		full_frames = []
 		while 1:
@@ -246,7 +275,7 @@ def wav2lip_main(args):
 
 			full_frames.append(frame)
 
-	print ("Number of frames available for inference: "+str(len(full_frames)))
+	print (str(time.time())+" Number of frames available for inference: "+str(len(full_frames)))
 
 	if not args.audio.endswith('.wav'):
 		print('Extracting raw audio...')
@@ -257,7 +286,7 @@ def wav2lip_main(args):
 
 	wav = audio.load_wav(args.audio, 16000)
 	mel = audio.melspectrogram(wav)
-	print(mel.shape)
+	print(str(time.time())+str(mel.shape))
 
 	if np.isnan(mel.reshape(-1)).sum() > 0:
 		raise ValueError('Mel contains nan! Using a TTS voice? Add a small epsilon noise to the wav file and try again')
@@ -273,18 +302,20 @@ def wav2lip_main(args):
 		mel_chunks.append(mel[:, start_idx : start_idx + mel_step_size])
 		i += 1
 
-	print("Length of mel chunks: {}".format(len(mel_chunks)))
+	print(str(time.time())+" Length of mel chunks: {}".format(len(mel_chunks)))
 
-	full_frames = full_frames[:len(mel_chunks)]
+	#full_frames = full_frames[:len(mel_chunks)]
 
 	batch_size = args.wav2lip_batch_size
 	gen = datagen(full_frames.copy(), mel_chunks, args)
+	print(str(time.time())+" after datagen")
 
 	for i, (img_batch, mel_batch, frames, coords) in enumerate(tqdm(gen, 
 											total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
 		if i == 0:
+			print (str(time.time())+" before Model loaded")
 			model = load_model(args.checkpoint_path)
-			print ("Model loaded")
+			print (str(time.time())+" after Model loaded")
 
 			frame_h, frame_w = full_frames[0].shape[:-1]
 			out = cv2.VideoWriter('modules/wav2lip/temp/result.avi', 
@@ -306,7 +337,8 @@ def wav2lip_main(args):
 			out.write(f)
 
 	out.release()
+	print(str(time.time())+" after mixing mels and faces, before ffmpeg")
 
 	command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'modules/wav2lip/temp/result.avi', args.outfile)
 	subprocess.call(command, shell=platform.system() != 'Windows')
-	print ("wav2lip done in "+str(round(time.time()-start_time))+" s.")
+	print (str(time.time())+"wav2lip done in "+str(round(time.time()-start_time))+" s.")
