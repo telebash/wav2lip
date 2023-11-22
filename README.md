@@ -1,8 +1,9 @@
 # **Wav2Lip**: *Accurately Lip-syncing Videos In The Wild*
 
-slightly modified to run as a Silly Tavern extension by [Mozer](https://github.com/Mozer)
+- slightly modified to run as a Silly Tavern extension by [Mozer](https://github.com/Mozer)
+- Now it supports CPU and caching, giving 2x speed-up!
+- Full info about this ST extension is here: https://github.com/Mozer/wav2lip_extension
 
-Full info about this ST extension is here: https://github.com/Mozer/wav2lip_extension
 
 
 ## original Readme
