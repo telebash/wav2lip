@@ -209,7 +209,9 @@ def datagen(frames, mels, args):
 		yield img_batch, mel_batch, frame_batch, coords_batch
 
 mel_step_size = 16
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+device = 'cpu' # cpu, cuda
 print('wav2lip: using {} for inference.'.format(device))
 
 def _load(checkpoint_path):
