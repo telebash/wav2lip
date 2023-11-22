@@ -133,11 +133,12 @@ def face_detect(images, args):
 	del detector
 	return results 
 
-def face_detect_with_cache(images, args, input_video_fname, mel_chunks_len):
+def face_detect_with_cache(images, args, input_video_fname, input_file_size):
 	# Check if cache exists
-	cache_path = f"{Path(__file__).parent}/cache/face_detection/{input_video_fname}.pkl"
+	cache_filename = input_video_fname+"_"+str(input_file_size)+".pkl"
+	cache_path = f"{Path(__file__).parent}/cache/face_detection/{cache_filename}"
 	if not Path(cache_path).exists():
-		print("Face detection cache "+input_video_fname+".pkl doesn't exist, calling face detect")
+		print("Face detection cache "+cache_filename+" doesn't exist, calling face detect")
 		faces = face_detect(images, args)
 		
 		# Save encoded faces to cache file
@@ -146,35 +147,38 @@ def face_detect_with_cache(images, args, input_video_fname, mel_chunks_len):
 	
 	else:
 		# Load cached faces from file
-		print("Load cached faces from file "+input_video_fname+".pkl")
+		print("Loading cached faces from file "+cache_filename)
 		with open(cache_path, "rb") as f:
 			faces = pickle.load(f)
 	
-	faces = faces[:mel_chunks_len]
+	#faces = faces[start_frame:mel_chunks_len+start_frame]
     
 	return faces
 
 
 def datagen(frames, mels, args):
-	#print ("datagen input params:")
-	#print (frames)
-	#print (mels)
 	img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
-
+	if len(frames) > 60:
+		start_frame = random.randrange(0, len(frames)-60)
+		if start_frame < 0:
+			start_frame = 0
+	else:
+		start_frame = 0
 	print(str(time.time())+" Before face detection")
 	if args.box[0] == -1:
 		if not args.static:
-			face_det_results = face_detect_with_cache(frames, args, os.path.basename(args.face), len(mels)) # BGR2RGB for CNN face detection
+			face_det_results = face_detect_with_cache(frames, args, os.path.basename(args.face), os.stat(args.face).st_size) # BGR2RGB for CNN face detection
 		else:
-			face_det_results = face_detect_with_cache([frames[0]], args, os.path.basename(args.face), len(mels))
+			face_det_results = face_detect_with_cache([frames[0]], args, os.path.basename(args.face), os.stat(args.face).st_size)
 	else:
 		print('Using the specified bounding box instead of face detection...')
 		y1, y2, x1, x2 = args.box
 		face_det_results = [[f[y1: y2, x1:x2], (y1, y2, x1, x2)] for f in frames]
 
-	print(str(time.time())+" after face detection")
+	print(str(time.time())+" after face detection, mels: "+str(len(mels))+", frames: "+str(len(frames))+", facces: "+str(len(face_det_results))+", start_frame: "+str(start_frame))
 	for i, m in enumerate(mels):
-		idx = 0 if args.static else i%len(frames)
+		idx = 0 if args.static else i%len(frames)+start_frame
+		idx = idx%len(frames)
 		frame_to_save = frames[idx].copy()
 		face, coords = face_det_results[idx].copy()
 
@@ -306,7 +310,7 @@ def wav2lip_main(args):
 
 	print(str(time.time())+" Length of mel chunks: {}".format(len(mel_chunks)))
 
-	#full_frames = full_frames[:len(mel_chunks)]
+	#full_frames = full_frames[:len(mel_chunks)]    #now we are caching faces for a full video , but returning only needed length
 
 	batch_size = args.wav2lip_batch_size
 	gen = datagen(full_frames.copy(), mel_chunks, args)
@@ -339,7 +343,7 @@ def wav2lip_main(args):
 			out.write(f)
 
 	out.release()
-	print(str(time.time())+" after mixing mels and faces, before ffmpeg")
+	print(str(time.time())+" after inference of mixing mels and faces, before ffmpeg")
 
 	command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'modules/wav2lip/temp/result.avi', args.outfile)
 	subprocess.call(command, shell=platform.system() != 'Windows')
