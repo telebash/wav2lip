@@ -8,6 +8,7 @@ import torch, modules.wav2lip.face_detection as face_detection
 from modules.wav2lip.models import Wav2Lip
 import platform, time
 import pickle
+from huggingface_hub import hf_hub_download
 from pathlib import Path
 
 '''
@@ -227,6 +228,18 @@ def _load(checkpoint_path):
 	return checkpoint
 
 def load_model(path):
+	if os.path.isfile(path) == False:
+		checkpoint_fname = os.path.basename(path)
+		checkpoint_dir = os.path.dirname(os.path.realpath(__file__))+'\\checkpoints'
+		if checkpoint_fname == "wav2lip.pth":
+			print(f"Downloading "+checkpoint_fname+" model from huggingface into "+checkpoint_dir+"...") 
+			hf_hub_download(repo_id="Ftfyhh/wav2lip", filename="wav2lip.pth", local_dir=checkpoint_dir, local_dir_use_symlinks=False)
+		elif checkpoint_fname == "wav2lip_gan.pth":
+			print(f"Downloading "+checkpoint_fname+" model from huggingface into "+checkpoint_dir+"...") 
+			hf_hub_download(repo_id="Ftfyhh/wav2lip", filename="wav2lip_gan.pth", local_dir=checkpoint_dir, local_dir_use_symlinks=False)
+		else:
+			print ("Error: Download your model manually and put into /wav2lip/checkpoints/")
+		
 	model = Wav2Lip()
 	print("Load checkpoint from: {}".format(path))
 	checkpoint = _load(path)
