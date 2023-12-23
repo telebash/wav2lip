@@ -54,14 +54,16 @@ wav2lip_args = json.loads(wav2lip_args_json, object_hook=lambda d: SimpleNamespa
 
 
 # generate and save video, returns nothing
-def wav2lip_server_generate(char_folder="default", device="cpu"):
+def wav2lip_server_generate(char_folder="default", device="cpu", audio="test"):
     files = [ f for f in os.listdir("modules/wav2lip/input/"+char_folder+"/") if os.path.isfile(os.path.join("modules/wav2lip/input/"+char_folder+"/",f)) ]
     rand_r = random.randrange(0, len(files))
     print("wav2lip starting with input: "+files[rand_r])
     wav2lip_args.face = "modules/wav2lip/input/"+char_folder+"/"+files[rand_r]
     wav2lip_args.outfile = "modules/wav2lip/output/wav2lip.mp4"
     wav2lip_args.device = device
+    wav2lip_args.audio = audio+".wav" # test.wav from silero and out.wav from xttsv2
     wav2lip_module.wav2lip_main(wav2lip_args)
+   
     return "True"
 
 
