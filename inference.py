@@ -11,14 +11,14 @@ import platform
 parser = argparse.ArgumentParser(description='Inference code to lip-sync videos in the wild using Wav2Lip models')
 
 parser.add_argument('--checkpoint_path', type=str, 
-					help='Name of saved checkpoint to load weights from', required=True)
+					help='Name of saved checkpoint to load weights from', required=False, default='checkpoints\\wav2lip.pth')
 
 parser.add_argument('--face', type=str, 
-					help='Filepath of video/image that contains faces to use', required=True)
+					help='Filepath of video/image that contains faces to use', required=False, default='input\\echoes\\MotionNinja_20231128143614.mp4')
 parser.add_argument('--audio', type=str, 
-					help='Filepath of video/audio file to use as raw audio source', required=True)
+					help='Filepath of video/audio file to use as raw audio source', required=False, default='temp\\chorus_full.wav')
 parser.add_argument('--outfile', type=str, help='Video path to save result. See default for an e.g.', 
-								default='results/result_voice.mp4')
+								default='output/result_voice.mp4')
 
 parser.add_argument('--static', type=bool, 
 					help='If True, then use only first video frame for inference', default=False)

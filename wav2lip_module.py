@@ -135,11 +135,12 @@ def face_detect(images, args):
 	return results 
 
 def face_detect_with_cache(images, args, input_video_fname, input_file_size):
-	# Check if cache exists
+	global device
+    # Check if cache exists
 	cache_filename = input_video_fname+"_"+str(input_file_size)+".pkl"
 	cache_path = f"{Path(__file__).parent}/cache/face_detection/{cache_filename}"
 	if not Path(cache_path).exists():
-		print("Face detection cache "+cache_filename+" doesn't exist, calling face detect")
+		print("Face detection cache "+cache_filename+" doesn't exist, calling face detect using device: "+device)
 		faces = face_detect(images, args)
 		
 		# Save encoded faces to cache file
@@ -214,12 +215,11 @@ def datagen(frames, mels, args):
 		yield img_batch, mel_batch, frame_batch, coords_batch
 
 mel_step_size = 16
-#device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-device = 'cpu' # cpu, cuda
-print('wav2lip: using {} for inference.'.format(device))
 
-def _load(checkpoint_path):
+device = '' # cpu, cuda
+
+def _load(checkpoint_path, device="cpu"):
 	if device == 'cuda':
 		checkpoint = torch.load(checkpoint_path)
 	else:
@@ -227,7 +227,7 @@ def _load(checkpoint_path):
 								map_location=lambda storage, loc: storage)
 	return checkpoint
 
-def load_model(path):
+def load_model(path, device="cpu"):
 	if os.path.isfile(path) == False:
 		checkpoint_fname = os.path.basename(path)
 		checkpoint_dir = os.path.dirname(os.path.realpath(__file__))+'\\checkpoints'
@@ -241,8 +241,8 @@ def load_model(path):
 			print ("Error: Download your model manually and put into /wav2lip/checkpoints/")
 		
 	model = Wav2Lip()
-	print("Load checkpoint from: {}".format(path))
-	checkpoint = _load(path)
+	print("Load checkpoint to "+device+" from: {}".format(path))
+	checkpoint = _load(path, device)
 	s = checkpoint["state_dict"]
 	new_s = {}
 	for k, v in s.items():
@@ -255,6 +255,9 @@ def load_model(path):
 def wav2lip_main(args):
 	print(str(time.time())+" wav2lip_main")
 	print(args)
+	global device
+	device = args.device
+	
 	start_time = time.time()
 	if os.path.isfile(args.face) and args.face.split('.')[1] in ['jpg', 'png', 'jpeg']:
 		args.static = True
@@ -333,15 +336,15 @@ def wav2lip_main(args):
 											total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
 		if i == 0:
 			print (str(time.time())+" before Model loaded")
-			model = load_model(args.checkpoint_path)
+			model = load_model(args.checkpoint_path, args.device)
 			print (str(time.time())+" after Model loaded")
 
 			frame_h, frame_w = full_frames[0].shape[:-1]
 			out = cv2.VideoWriter('modules/wav2lip/temp/result.avi', 
 									cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
 
-		img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
-		mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
+		img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(args.device)
+		mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(args.device)
 
 		with torch.no_grad():
 			pred = model(mel_batch, img_batch)
