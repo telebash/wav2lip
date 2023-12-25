@@ -3,7 +3,8 @@ import os, time, shutil, codecs
 
 def return_patch_files():
     file_paths_with_replacements = [
-        ['../../server.py', {'app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024': """app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+        ['../../server.py', 
+            {'app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024': """app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
 
 if "wav2lip" in modules:
@@ -38,7 +39,10 @@ if "wav2lip" in modules:
     def wav2lip_tts_generate():
         voice = request.get_json()
         return wav2lip_server_tts_generate(tts_service, voice)
-    """}],
+    """,
+    
+            'streaming_module.whisper_model, streaming_module.vosk_model = streaming_module.load_model(file_path=whisper_model_path)': '''#streaming_module.whisper_model, streaming_module.vosk_model = streaming_module.load_model(file_path=whisper_model_path)'''}
+        ],
     ]
     
     return file_paths_with_replacements
@@ -53,7 +57,7 @@ def patch_files(file_paths_with_replacements):
             # Check if file has already been patched
             backup_file_path = file_path + '.bkp'
             if os.path.exists(backup_file_path):
-                print(file_path+" was already patched before (.bkp file exists), skipping.")
+                print(file_path+" was already patched before (.bkp file exists. If you want to patch it again - first restore the original file), skipping.")
                 continue
             
             # Create backup copy of original file
