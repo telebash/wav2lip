@@ -55,7 +55,10 @@ wav2lip_args = json.loads(wav2lip_args_json, object_hook=lambda d: SimpleNamespa
 
 # generate and save video, returns nothing
 def wav2lip_server_generate(char_folder="default", device="cpu", audio="test"):
-    files = [ f for f in os.listdir("modules/wav2lip/input/"+char_folder+"/") if os.path.isfile(os.path.join("modules/wav2lip/input/"+char_folder+"/",f)) ]
+    files = [ f for f in os.listdir("modules/wav2lip/input/"+char_folder+"/") if os.path.isfile(os.path.join("modules/wav2lip/input/"+char_folder+"/",f)) and f != 'silence.mp4' ]
+    if len(files) < 1:
+        print("no files in input/"+char_folder+". Put some videos there.")
+        return "True"
     rand_r = random.randrange(0, len(files))
     print("wav2lip starting with input: "+files[rand_r])
     wav2lip_args.face = "modules/wav2lip/input/"+char_folder+"/"+files[rand_r]
@@ -71,9 +74,9 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test"):
 
 def wav2lip_server_play(fname, char_folder):
     if fname == "silence":
-        WAV2LIP_OUTPUT_PATH = os.path.join(parent_dir, "input\\"+char_folder+"\\")
+        WAV2LIP_OUTPUT_PATH = os.path.join(parent_dir, "input", char_folder, "")
     else:
-        WAV2LIP_OUTPUT_PATH = os.path.join(parent_dir, "output\\")    
+        WAV2LIP_OUTPUT_PATH = os.path.join(parent_dir, "output", "")    
     print(WAV2LIP_OUTPUT_PATH)
     print(fname)
     return send_from_directory(WAV2LIP_OUTPUT_PATH, f"{fname}.mp4")

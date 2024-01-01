@@ -177,7 +177,7 @@ def datagen(frames, mels, args):
 		y1, y2, x1, x2 = args.box
 		face_det_results = [[f[y1: y2, x1:x2], (y1, y2, x1, x2)] for f in frames]
 
-	print(str(time.time())+" after face detection, mels: "+str(len(mels))+", frames: "+str(len(frames))+", facces: "+str(len(face_det_results))+", start_frame: "+str(start_frame))
+	print(str(time.time())+" after face detection, mels: "+str(len(mels))+", frames: "+str(len(frames))+", faces: "+str(len(face_det_results))+", start_frame: "+str(start_frame))
 	for i, m in enumerate(mels):
 		idx = 0 if args.static else i%len(frames)+start_frame
 		idx = idx%len(frames)
@@ -230,7 +230,7 @@ def _load(checkpoint_path, device="cpu"):
 def load_model(path, device="cpu"):
 	if os.path.isfile(path) == False:
 		checkpoint_fname = os.path.basename(path)
-		checkpoint_dir = os.path.dirname(os.path.realpath(__file__))+'\\checkpoints'
+		checkpoint_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),'checkpoints')
 		if checkpoint_fname == "wav2lip.pth":
 			print(f"Downloading "+checkpoint_fname+" model from huggingface into "+checkpoint_dir+"...") 
 			hf_hub_download(repo_id="Ftfyhh/wav2lip", filename="wav2lip.pth", local_dir=checkpoint_dir, local_dir_use_symlinks=False)
