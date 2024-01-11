@@ -117,7 +117,7 @@ def face_detect(images, args):
 	pady1, pady2, padx1, padx2 = args.pads
 	for rect, image in zip(predictions, images):
 		if rect is None:
-			cv2.imwrite(f"{Path(__file__).parent}/temp/faulty_frame.jpg", image) # check this frame where the face was not detected.
+			#cv2.imwrite(f"{Path(__file__).parent}/temp/faulty_frame.jpg", image) # check this frame where the face was not detected.
 			y1 = x1 = 0
 			x2 = y2 = 1
 			print ('face not found in frame '+str(len(results))+'. skipping it')
