@@ -311,7 +311,7 @@ def wav2lip_main(args):
 
 	wav = audio.load_wav(args.audio, 16000)
 	mel = audio.melspectrogram(wav)
-	print(str(time.time())+str(mel.shape))
+	print(str(time.time())+" after generation of mel melspectrogram "+str(mel.shape))
 
 	if np.isnan(mel.reshape(-1)).sum() > 0:
 		raise ValueError('Mel contains nan! Using a TTS voice? Add a small epsilon noise to the wav file and try again')
@@ -338,9 +338,9 @@ def wav2lip_main(args):
 	for i, (img_batch, mel_batch, frames, coords) in enumerate(tqdm(gen, 
 											total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
 		if i == 0:
-			print (str(time.time())+" before Model loaded")
+			print (str(time.time())+" before Model load")
 			model = load_model(args.checkpoint_path, args.device)
-			print (str(time.time())+" after Model loaded")
+			print (str(time.time())+" Model loaded. Starting wav2lip inference.")
 
 			frame_h, frame_w = full_frames[0].shape[:-1]
 			out = cv2.VideoWriter('modules/wav2lip/temp/result.avi', 
@@ -366,4 +366,5 @@ def wav2lip_main(args):
 
 	command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'modules/wav2lip/temp/result.avi', args.outfile)
 	subprocess.call(command, shell=platform.system() != 'Windows')
-	print (str(time.time())+"wav2lip done in "+str(round(time.time()-start_time))+" s.")
+	torch.cuda.empty_cache()
+	print (str(time.time())+" wav2lip done in "+str(round(time.time()-start_time))+" s.")
