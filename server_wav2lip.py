@@ -40,7 +40,7 @@ wav2lip_args_json = '''{
     "outfile":"modules/wav2lip/output/wav2lip.mp4", 
     "img_size":96, 
     "fps":15, 
-    "wav2lip_batch_size":1024, 
+    "wav2lip_batch_size":16,
     "box":[-1, -1, -1, -1], 
     "face_det_batch_size":16,
     "pads":[0, 10, 0, 0],
@@ -64,7 +64,14 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test"):
     wav2lip_args.face = "modules/wav2lip/input/"+char_folder+"/"+files[rand_r]
     wav2lip_args.outfile = "modules/wav2lip/output/wav2lip.mp4"
     wav2lip_args.device = device
-    wav2lip_args.audio = audio+".wav" # test.wav from silero and out.wav from xttsv2
+    if os.path.isfile(os.path.join("music.wav")):
+        wav2lip_args.audio = "music.wav" # testing music and wav2ip
+        print("found music.wav. using it instead of TTS audio")
+    elif os.path.isfile(os.path.join("music.mp3")):
+        wav2lip_args.audio = "music.mp3" # testing music and wav2ip
+        print("found music.mp3. using it instead of TTS audio")
+    else:
+        wav2lip_args.audio = audio+".wav" # test.wav from silero and out.wav from xttsv2
     wav2lip_module.wav2lip_main(wav2lip_args)
    
     return "True"
