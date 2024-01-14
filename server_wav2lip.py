@@ -42,7 +42,7 @@ wav2lip_args_json = '''{
     "fps":15, 
     "wav2lip_batch_size":16,
     "box":[-1, -1, -1, -1], 
-    "face_det_batch_size":16,
+    "face_det_batch_size":4,
     "pads":[0, 10, 0, 0],
     "crop":[0, -1, 0, -1], 
     "nosmooth": "False", 
