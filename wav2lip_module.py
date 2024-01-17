@@ -11,6 +11,8 @@ import pickle
 from huggingface_hub import hf_hub_download
 from pathlib import Path
 
+model = None
+
 '''
 from functools import wraps
 from flask import (
@@ -258,7 +260,7 @@ def load_model(path, device="cpu"):
 def wav2lip_main(args):
 	print(str(time.time())+" wav2lip_main")
 	print(args)
-	global device
+	global device, model
 	device = args.device
 	
 	start_time = time.time()
@@ -339,7 +341,11 @@ def wav2lip_main(args):
 											total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
 		if i == 0:
 			print (str(time.time())+" before Model load")
-			model = load_model(args.checkpoint_path, args.device)
+			if model is None:
+				print ("Model is not loaded, loading...")
+				model = load_model(args.checkpoint_path, args.device)
+			else:
+				print ("Model is aleady loaded, using it...")
 			print (str(time.time())+" Model loaded. Starting wav2lip inference.")
 
 			frame_h, frame_w = full_frames[0].shape[:-1]
@@ -367,4 +373,4 @@ def wav2lip_main(args):
 	command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'modules/wav2lip/temp/result.avi', args.outfile)
 	subprocess.call(command, shell=platform.system() != 'Windows')
 	torch.cuda.empty_cache()
-	print (str(time.time())+" wav2lip done in "+str(round(time.time()-start_time))+" s.")
+	print (str(time.time())+" wav2lip done in "+str(round(time.time()-start_time, 2))+" s.")
