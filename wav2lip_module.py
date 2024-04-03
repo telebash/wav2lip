@@ -360,7 +360,10 @@ def wav2lip_main(args):
 
         subprocess.call(command, shell=True)
         args.audio = 'temp/temp.wav'
-
+    
+    if (not os.path.isfile(args.audio)):
+        print("Error: "+args.audio+" file is not found")
+        return
     wav = audio.load_wav(args.audio, 16000)
     print("wav_"+str(args.chunk)+" len "+str(len(wav)))
     if (not len(wav)):
