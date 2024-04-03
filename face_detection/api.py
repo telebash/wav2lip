@@ -77,3 +77,7 @@ class FaceAlignment:
             results.append((x1, y1, x2, y2))
 
         return results
+        
+    def unload(self):
+        self.face_detector.unload()
+        return True    
