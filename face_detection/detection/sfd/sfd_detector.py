@@ -19,12 +19,12 @@ class SFDDetector(FaceDetector):
 
         # Initialise the face detector
         if not os.path.isfile(path_to_detector):
-            model_weights = load_url(models_urls['s3fd'])
+            self.model_weights = load_url(models_urls['s3fd'])
         else:
-            model_weights = torch.load(path_to_detector)
+            self.model_weights = torch.load(path_to_detector)
 
         self.face_detector = s3fd()
-        self.face_detector.load_state_dict(model_weights)
+        self.face_detector.load_state_dict(self.model_weights)
         self.face_detector.to(device)
         self.face_detector.eval()
 
@@ -46,6 +46,12 @@ class SFDDetector(FaceDetector):
 
         return bboxlists
 
+    def unload(self):
+        del self.model_weights
+        torch.cuda.empty_cache()
+
+        return True   
+        
     @property
     def reference_scale(self):
         return 195
