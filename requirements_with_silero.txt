@@ -6,3 +6,4 @@ torch
 torchvision
 tqdm
 numba
+silero-api-server @ git+https://github.com/Mozer/silero-api-server
