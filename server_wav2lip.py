@@ -70,7 +70,7 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
     if (reply_part == 0):
         wav2lip_next_chunk_to_gen = chunk
         next_video_chunk_global = chunk
-        print("part_0 reply came, setting globals wav2lip_next_chunk_to_gen and to: "+str(chunk))
+        #print("part_0 reply came, setting globals wav2lip_next_chunk_to_gen and to: "+str(chunk))
     
     print("in wav2lip_server_generate: is busy: "+str(wav2lip_is_busy)+", face_detect_running: "+str(os.environ["face_detect_running"])+", chunk: "+str(chunk)+", chunk_needed: "+str(wav2lip_next_chunk_to_gen)+", reply: "+str(reply_part))
     
@@ -134,7 +134,7 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
                 wav2lip_args.outfile = "modules/wav2lip/output/wav2lip_"+str(chunk)+".m3u8"  # not used anymore
             else:
                 wav2lip_args.outfile = "modules/wav2lip/output/wav2lip.mp4"
-            print("wav2lip is using char_folder "+char_folder+" and "+order+" order, starting with file: "+filename+". Audio file: "+audio+".wav. Output: "+ wav2lip_args.outfile)    
+            #print("wav2lip is using char_folder "+char_folder+" and "+order+" order, starting with file: "+filename+". Audio file: "+audio+".wav. Output: "+ wav2lip_args.outfile)    
             wav2lip_args.device = device
             wav2lip_args.chunk = chunk
             if os.path.isfile(os.path.join("music.wav")):
@@ -150,9 +150,9 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
             wav2lip_has_fresh_video = 1
             if (not reply_part):
                 next_video_chunk_global = chunk # first part of reply
-                print("changed next_video_chunk_global: "+str(next_video_chunk_global))
+                #print("changed next_video_chunk_global: "+str(next_video_chunk_global))
             wav2lip_next_chunk_to_gen = chunk + 1
-            print("done with wav2lip, next_chunk_needed: "+str(wav2lip_next_chunk_to_gen))       
+            #print("done with wav2lip, next_chunk_needed: "+str(wav2lip_next_chunk_to_gen))       
         
         else:
             print("speech detected, wav2lip_server won't generate")       
@@ -160,13 +160,13 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
         wav2lip_is_busy = 0         
         
     else:        
-        print("Error: skipping some mp4 and setting busy to 0. wav2lip was busy: "+str(wav2lip_is_busy)+", chunk: "+str(chunk)+", chunk_needed: "+str(wav2lip_next_chunk_to_gen)+", step: "+str(steps_tried))
+        print("Error: skipping some mp4 and setting busy to 0 after timeout. wav2lip was busy: "+str(wav2lip_is_busy)+", chunk: "+str(chunk)+", chunk_needed: "+str(wav2lip_next_chunk_to_gen)+", step: "+str(steps_tried))
         wav2lip_is_busy = 0
    
     return "True"
 
 
-# return created video as mp4 using http
+# return created video as mp4 using http, not used now
 def wav2lip_server_play(fname, char_folder):
     if fname == "silence":
         WAV2LIP_OUTPUT_PATH = os.path.join(parent_dir, "input", char_folder, "")
@@ -380,11 +380,11 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
         fps = 25
     time_between_video_frames = int(1000 / fps) # 40 ms for 25fps
     audio_is_behind = 1 #  audio is always lagging behind wav2lip video    
-    print(str(time.time())+" after cv2 cap")
+    #print(str(time.time())+" after cv2 cap")
         
     while os.path.isfile(video_file) and os.path.isfile(audio_file):        
         
-        print(str(time.time())+" before pyaudio")
+        #print(str(time.time())+" before pyaudio")
         # Open a PyAudio stream
         if (pyaudio_p is None):
             pyaudio_p = pyaudio.PyAudio() # takes 0.10 s        
@@ -393,13 +393,13 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
                         channels=wf.getnchannels(),
                         rate=wf.getframerate(),
                         output=True)
-        print(str(time.time())+" after open")
+        #print(str(time.time())+" after open")
         buffer_size = int(round((wf.getframerate() / 1000) * time_between_video_frames)) # 960 bytes == 40 ms between frames in a 25fps video        
-        print(str(time.time())+" after buffer_size")
+        #print(str(time.time())+" after buffer_size")
         # Read the first audio file into the buffer
         data = wf.readframes(buffer_size)
         if (audio_is_behind):
-            print(str(time.time())+" starting playback of "+str(current_chunk-1))
+            #print(str(time.time())+" starting playback of "+str(current_chunk-1))
             stream.write(data)
             data = wf.readframes(int(buffer_size/2 + sync_audio_delta_bytes))
         current_chunk+=1
@@ -422,7 +422,7 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
             if cap.isOpened():            
                 ret, frame = cap.read()
                 if not ret: # last video frame
-                    print("notice: cv2 nothing to read, missing frame")
+                    print("cv2: missing video frame")
                 if (ret):
                     cv2.imshow(caption, frame) # window caption, image
                 elapsed = (time.time() - start_time) * 1000  # msec
@@ -440,7 +440,7 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
                     cap.release()
                     cap = cv2.VideoCapture(video_file)
                     start_time = time.time()
-                    print ("new "+video_file + " is opened after Frame Drop")
+                    #print ("new "+video_file + " is opened after Frame Drop")
 
             # Check if there are more audio frames to play. 1920 bytes is normally returned for buffer_size 960 for 25fps video
             if not len(data) and current_audio_chunk > 0:                
@@ -452,7 +452,7 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
                     wf = wave.open(audio_file, 'rb')  # Open the next audio file                    
                     data = wf.readframes(buffer_size) # Read the next audio file into same buffer
                     current_audio_chunk = 0
-                    print("read new "+audio_file+" file. continue playback")
+                    #print("read new "+audio_file+" file. continue playback")
                     if (audio_is_behind):
                         stream.write(data)
                         if (buffer_size<=0):
@@ -461,7 +461,7 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
                     
                     # check new video
                     videos_played_n+=1
-                    print("end of "+video_file+", searching for next video "+str(current_chunk))
+                    #print("end of "+video_file+", searching for next video "+str(current_chunk))
                     video_file = 'modules/wav2lip/temp/result_'+str(current_chunk)+'.mp4'
                     if (not os.path.isfile(video_file)):
                         print("Notice: "+video_file+" is not found, nothing to play as a video")
@@ -469,11 +469,11 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
                         #audio_file = "out_"+str(current_chunk)+".wav"
                         #break
                     else:
-                        print (video_file + " and " + audio_file + " exist")
+                        #print (video_file + " and " + audio_file + " exist")
                         cap.release()
                         cap = cv2.VideoCapture(video_file)
                         start_time = time.time()
-                        print ("new "+video_file + " is opened")
+                        #print ("new "+video_file + " is opened")
             
                     current_chunk+=1
                 else:

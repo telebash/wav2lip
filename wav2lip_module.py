@@ -24,7 +24,6 @@ model = None                # to keep model in vram between runs
 mel_step_size = 16          
 device = '' # cpu, cuda     # use request param to set device
 full_frames_by_file = {}    #
-is_playing = 0              # 1 if video is playing at the moment (not exactly in this thread)
 start_frame_global = 0             # start frame to play from current video, to make smooth chunks playing
 
 '''
@@ -297,14 +296,8 @@ def load_model(path, device="cpu"):
 def wav2lip_main(args):
    
     print(str(time.time())+" wav2lip_main")
-    print(args)
-    global device, model, full_frames_by_file, is_playing
-    if (not is_playing):
-        is_playing = 1
-        is_thread_for_playback = 1
-        print("current request thread "+str(args.chunk)+" will be used for playing video")
-    else:
-        is_thread_for_playback = 0
+    #print(args)
+    global device, model, full_frames_by_file
         
     device = args.device
     
@@ -325,12 +318,10 @@ def wav2lip_main(args):
         fps = video_stream.get(cv2.CAP_PROP_FPS)
         #fps = args.fps
 
-        print(str(time.time())+' Reading video frames...')
 
         #  0.12s to read 28s video. lets store it globally in RAM for reuse
         if args.face in full_frames_by_file:
             full_frames = full_frames_by_file[args.face] # 0.001 s
-            print("reusing full_frames from globals") 
         else:
             full_frames = []
             while 1:
@@ -352,10 +343,7 @@ def wav2lip_main(args):
                 full_frames.append(frame)
                 full_frames_by_file[args.face] = full_frames
 
-    print (str(time.time())+" Number of frames available for inference: "+str(len(full_frames))) 
-
     if not args.audio.endswith('.wav'):
-        print('Extracting raw audio...')
         command = 'ffmpeg -y -i {} -strict -2 {}'.format(args.audio, 'temp/temp.wav')
 
         subprocess.call(command, shell=True)
@@ -365,13 +353,12 @@ def wav2lip_main(args):
         print("Error: "+args.audio+" file is not found")
         return
     wav = audio.load_wav(args.audio, 16000)
-    print("wav_"+str(args.chunk)+" len "+str(len(wav)))
     if (not len(wav)):
         print("out_"+str(args.chunk)+".wav len "+str(len(wav))+" is bad, exiting")
         return
         
     mel = audio.melspectrogram(wav)
-    print(str(time.time())+" after generation of "+str(args.chunk)+" mel melspectrogram "+str(mel.shape))
+    #print(str(time.time())+" after generation of "+str(args.chunk)+" mel melspectrogram "+str(mel.shape))
    
 
     if np.isnan(mel.reshape(-1)).sum() > 0:
@@ -394,44 +381,42 @@ def wav2lip_main(args):
     # or at the beginning
     #duplicated_elements = [mel_chunks[0]] * 3  # Duplicate the first element thrice
     #mel_chunks = np.insert(mel_chunks, obj=0, values=duplicated_elements, axis=0)  # Insert duplicated elements at index 0
-    print(str(time.time())+" Length of mel chunks: {}".format(len(mel_chunks)))
+    #print(str(time.time())+" Length of mel chunks: {}".format(len(mel_chunks)))
 
     #full_frames = full_frames[:len(mel_chunks)]    #now we are caching faces for a full video
 
     batch_size = args.wav2lip_batch_size
     gen = datagen(full_frames.copy(), mel_chunks, args) # 0.00s
-    print(str(time.time())+" after datagen")
+    #print(str(time.time())+" after datagen")
 
     for i, (img_batch, mel_batch, frames, coords) in enumerate(tqdm(gen, 
                                             total=int(np.ceil(float(len(mel_chunks))/batch_size)))):
         if i == 0:
-            print (str(time.time())+" before Model load")
+            #print (str(time.time())+" before Model load")
             if model is None:
-                print ("Model is not loaded, loading...")
+                #print ("Model is not loaded, loading...")
                 model = load_model(args.checkpoint_path, args.device)
-            else:
-                print ("Model is aleady loaded, using it...")
             print (str(time.time())+" Model loaded. Starting wav2lip inference.")
 
             frame_h, frame_w = full_frames[0].shape[:-1]
-            # MPEG4-AVC. AVC1 may not work on all systems. try X264, AVC1, MP4V. On my system everything worked fine even without .dll, although VideoWriter was reporting errors.
-            # Donwload .dll of required version from https://github.com/cisco/openh264/releases and put to /system32 or /ffmpeg/bin dir. This will hide the error in console
+            # MPEG4-AVC. AVC1 may not work on all systems. try X264, AVC1, MP4V. On my system everything worked fine even without .dll, although VideoWriter was reporting errors.            
             out = cv2.VideoWriter('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4', cv2.VideoWriter_fourcc(*'avc1'), fps, (frame_w, frame_h)) # 0.00s test mp2v avc1
-            print("cv2 created file temp/result_"+str(args.chunk)+"_tmp.mp4")
+            #print("Download .dll of required version from https://github.com/cisco/openh264/releases and put to /system32 or /ffmpeg/bin dir. This will hide the error in console. In my case it was openh264-1.8.0-win64.dll")
+            #print("cv2 created file temp/result_"+str(args.chunk)+"_tmp.mp4")
         
         print(str(time.time())+" (mel_b:"+str(len(mel_batch))+", img_b:"+str(len(img_batch))+")")
         # last run takes 0.14s if current_batch_size is different from previous. if current_batch_size == previous: inference takes just 0.01s
         if (len(mel_batch) < batch_size):
             padding_len = batch_size - len(mel_batch)
             if padding_len:
-                print(str(time.time())+" filling last "+str(padding_len)+" mels/faces with last element to speed up batch")                
+                #print(str(time.time())+" filling last "+str(padding_len)+" mels/faces with last element to speed up batch")                
                 last_img = img_batch[-1][np.newaxis, ...]  # Add an extra dimension to allow concatenation
                 img_padding = np.repeat(last_img, padding_len, axis=0)
                 img_batch = np.concatenate((img_batch, img_padding), axis=0)
                 last_mel = mel_batch[-1][np.newaxis, ...]  # Add an extra dimension to allow concatenation
                 mel_padding = np.repeat(last_mel, padding_len, axis=0)
                 mel_batch = np.concatenate((mel_batch, mel_padding), axis=0)
-                print(str(time.time())+" done filling")
+                #print(str(time.time())+" done filling")
                 
         img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(args.device) # 0.001 s
         mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(args.device) # 0.001 s
@@ -442,11 +427,11 @@ def wav2lip_main(args):
         try:
             with torch.no_grad():
                 pred = model(mel_batch, img_batch)  # first run 0.14 s, other runs: 0.02 s
-            print(str(time.time())+" after inference (mel_b:"+str(len(mel_batch))+", img_b:"+str(len(img_batch))+").........")
+            #print(str(time.time())+" after inference (mel_b:"+str(len(mel_batch))+", img_b:"+str(len(img_batch))+").........")
         
         except RuntimeError as err:
-            print('Runtime error:', str(err))
-            print('Warning: audio chunks in out_'+str(args.chunk)+'.wav: '+str(len(mel_chunks))+', are empty, cant predict lips => TODO copy source frames from buffer to output. Exiting.')
+            #print('Runtime error:', str(err))
+            #print('Warning: audio chunks in out_'+str(args.chunk)+'.wav: '+str(len(mel_chunks))+', are empty, cant predict lips => TODO copy source frames from buffer to output. Exiting.')
             out.release()
             os.replace('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4', 'modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4')
             torch.cuda.empty_cache()
@@ -455,11 +440,11 @@ def wav2lip_main(args):
         
         # WORKS! doing everything on a GPU, collecting images in the same frames_gpu arr. sending it to cpu only after loop.
         pred = pred * 255.0 # pred[32, 3, 96, 96]
-        print(str(time.time())+" after pred * 255")
+        #print(str(time.time())+" after pred * 255")
         # Convert frames and coords to PyTorch tensors and move them to the GPU
         frames_gpu = []
         frames_gpu = [torch.from_numpy(frame).to(device) for frame in frames]   #  slow 0.13s. TODO: move all frames to GPU on app start? vram?
-        print(str(time.time())+" after moving frames to gpu")
+        #print(str(time.time())+" after moving frames to gpu")
         i = 0
         for p, f, c in zip(pred, frames_gpu, coords): # p[3, 96, 96]. 0.003 s
             y1, y2, x1, x2 = c            
@@ -469,23 +454,19 @@ def wav2lip_main(args):
                 f[y1:y2, x1:x2] = p     # Assign the processed patch to the cloned frame
                 frames_gpu[i] = f
                 i+=1
-            else:
-                print("p width or height is 0")
                 
         # After processing all frames, move them back to CPU memory. 0.003s
-        print(str(time.time())+" after GPU resizing")
+        #print(str(time.time())+" after GPU resizing")
         result_tensor = torch.stack(frames_gpu).cpu().numpy()
         
         # Write images to video file # 0.02 s
         for im in result_tensor:
             out.write(im)
             #print("f im "+str(len(im)))
-        print(str(time.time())+" after writing temp/result_"+str(args.chunk)) 
-        
-        
+        #print(str(time.time())+" after writing temp/result_"+str(args.chunk)) 
         
         '''
-        # old. WORKING        
+        # old, original, slower. WORKING        
         # GPU tensor to CPU array
         pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255. # 0.07s. check https://docs.cupy.dev/en/stable/ if it is faster then numpy
         # resize, replace, save
@@ -499,19 +480,11 @@ def wav2lip_main(args):
         print(str(time.time())+" after replacing and writing")
         '''
         
-        
-        
     out.release()
     os.replace('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4', 'modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4')
-    print(str(time.time())+" after inference of mixing mels and faces, before playing")
-    
-    # echo video + audio
-    #if (is_thread_for_playback):
-        #play_video_with_audio('modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4', args.audio, True, args.chunk)
-    is_playing = 0
-    #else:
+    #print(str(time.time())+" after inference of mixing mels and faces, before playing")
         
-    print("video is saved. This thread is not for playback, exiting.")
+    #print("video is saved. This thread is not for playback, exiting.")
     #command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 {}'.format(args.audio, 'modules/wav2lip/temp/result.avi', args.outfile) # mp4:0.30-0.23s.  avi: 0.12-0.13s
     #command = 'ffmpeg -y -i {} -i {} -strict -2 -q:v 1 -map 1:v -map 0:a -codec copy {}'.format(args.audio, 'modules/wav2lip/temp/result_'+str(args.chunk)+'.ts', args.outfile) # mp4 copy: 0.04s, plays in chrome on win11, todo: test in android
     #command = 'ffmpeg -y -i {} -i {} -g 60 -hls_time 2 -hls_list_size 0 -start_number {} {}'.format(args.audio, 'modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4', args.chunk, args.outfile) # mp4 copy: 0.04s, plays in chrome on win11, todo: test in android
