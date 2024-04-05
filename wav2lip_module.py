@@ -225,16 +225,19 @@ def datagen(frames, mels, args):
     for i, m in enumerate(mels):
         idx = 0 if args.static else i%len(frames)+start_frame
         idx = idx%len(frames)
-        frame_to_save = frames[idx].copy()
-        face, coords = face_det_results[idx].copy()
+        try:
+            frame_to_save = frames[idx].copy()
+            face, coords = face_det_results[idx].copy()
 
-        face = cv2.resize(face, (args.img_size, args.img_size))
+            face = cv2.resize(face, (args.img_size, args.img_size))
+                
+            img_batch.append(face)
+            mel_batch.append(m)
+            frame_batch.append(frame_to_save)
+            coords_batch.append(coords)
+        except AttributeError:
+            print("Error: no frame "+str(idx)+" in frames")
             
-        img_batch.append(face)
-        mel_batch.append(m)
-        frame_batch.append(frame_to_save)
-        coords_batch.append(coords)
-
         if len(img_batch) >= args.wav2lip_batch_size:
             img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
 
@@ -295,7 +298,7 @@ def load_model(path, device="cpu"):
 
 def wav2lip_main(args):
    
-    print(str(time.time())+" wav2lip_main")
+    print(str(time.time())+" wav2lip_main with file "+args.face)
     #print(args)
     global device, model, full_frames_by_file
         
@@ -310,7 +313,8 @@ def wav2lip_main(args):
         raise ValueError('--face argument must be a valid path to video/image file')
 
     elif args.face.split('.')[1] in ['jpg', 'png', 'jpeg']:
-        full_frames = [cv2.imread(args.face)]
+        #full_frames = [cv2.imread(args.face)] # not working with utf8 in path
+        full_frames = [cv2.imdecode(np.fromfile(args.face, np.uint8), cv2.IMREAD_UNCHANGED)]
         fps = args.fps
 
     else:
@@ -480,8 +484,10 @@ def wav2lip_main(args):
         print(str(time.time())+" after replacing and writing")
         '''
         
-    out.release()
-    os.replace('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4', 'modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4')
+    if "out" in locals():
+        out.release()
+    if (os.path.isfile('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4')):
+        os.replace('modules/wav2lip/temp/result_'+str(args.chunk)+'_tmp.mp4', 'modules/wav2lip/temp/result_'+str(args.chunk)+'.mp4')
     #print(str(time.time())+" after inference of mixing mels and faces, before playing")
         
     #print("video is saved. This thread is not for playback, exiting.")
