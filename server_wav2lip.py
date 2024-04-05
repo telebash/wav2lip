@@ -62,7 +62,7 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
     chunk = int(chunk)
     reply_part = int(reply_part)
     
-    if (time.time() - player_loop_running > 3.0):
+    if (audio!="silence" and time.time() - player_loop_running > 3.0):
         print("wav2lip player loop is not found ("+str(player_loop_running)+"), starting it")
         wav2lip_server_play_init()    
     
@@ -137,14 +137,17 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
             #print("wav2lip is using char_folder "+char_folder+" and "+order+" order, starting with file: "+filename+". Audio file: "+audio+".wav. Output: "+ wav2lip_args.outfile)    
             wav2lip_args.device = device
             wav2lip_args.chunk = chunk
-            if os.path.isfile(os.path.join("music.wav")):
-                wav2lip_args.audio = "music.wav" # testing music and wav2ip
-                print("found music.wav. using it instead of TTS audio")
-            elif os.path.isfile(os.path.join("music.mp3")):
-                wav2lip_args.audio = "music.mp3" # testing music and wav2ip
-                print("found music.mp3. using it instead of TTS audio")
-            else:
-                wav2lip_args.audio = "tts_out/"+audio+".wav" # test.wav from silero and out.wav from xttsv2        
+            if (audio == "silence"):
+                wav2lip_args.audio = audio+".wav" # silence init request
+            else:            
+                if os.path.isfile(os.path.join("music.wav")):
+                    wav2lip_args.audio = "music.wav" # testing music and wav2ip
+                    print("found music.wav. using it instead of TTS audio")           
+                elif os.path.isfile(os.path.join("music.mp3")):
+                    wav2lip_args.audio = "music.mp3" # testing music and wav2ip
+                    print("found music.mp3. using it instead of TTS audio")
+                else:
+                    wav2lip_args.audio = "tts_out/"+audio+".wav" # test.wav from silero and out.wav from xttsv2        
             
             wav2lip_module.wav2lip_main(wav2lip_args)
             wav2lip_has_fresh_video = 1
@@ -274,6 +277,27 @@ def xtts_play_allowed_check(filename="xtts_play_allowed.txt"):
         
     return 1       
 
+# get all char folder with videos, sorted by date desc
+def wav2lip_server_get_chars_desc():
+    base_dir = r'modules\wav2lip\input'
+
+    # Get a list of all items in the base directory
+    dirs = wav2lip_server_get_chars()
+
+    # sort by modification time
+    #dirs = [d for d in items if isdir(join(base_dir, d))]
+    dirs.sort(key=lambda x: os.path.getmtime(os.path.join(base_dir, x)), reverse=True)
+    
+    return dirs
+    
+
+# download checkpoint if needed, make face-detect for newly added video if found
+def wav2lip_server_generate_dummy():
+    char_folders = wav2lip_server_get_chars_desc()
+    print("wav2lip: running init generation with "+char_folders[0]+" and silence.wav")
+    wav2lip_server_generate(char_folders[0], "cuda", "silence", "latest", 0, 0)
+    
+    
 
 # wav2lip player loop
 # plays latest found videos locally, using cv2 and pyAudio
@@ -284,7 +308,7 @@ def wav2lip_server_play_init():
     
     player_loop_running = time.time()
     
-    print("Deleting old wavs and mp4s.")    
+    print("Deleting old temporary wavs and mp4s.")    
     video_path = 'modules/wav2lip/temp/' # Path where you want to check for existence of videos
     audio_path = 'tts_out/' # Path where you want to check for existence of audio
     delete_all_old_files(audio_path)
@@ -293,7 +317,7 @@ def wav2lip_server_play_init():
     step = 0
     xtts_play_allowed = 1
     
-    captions = ["Video chat", "Skynet", "San-Ti", "Waifu", "Interdimensional TV"]
+    captions = ["Video chat", "Skynet", "San-Ti", "Waifu", "Interdimensional TV", "Mozer TV"]
     rand_caption = random.choice(captions)
     
     cv2.destroyAllWindows()    # prev windows if any

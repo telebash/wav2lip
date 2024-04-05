@@ -404,7 +404,7 @@ def wav2lip_main(args):
             #print("Download .dll of required version from https://github.com/cisco/openh264/releases and put to /system32 or /ffmpeg/bin dir. This will hide the error in console. In my case it was openh264-1.8.0-win64.dll")
             #print("cv2 created file temp/result_"+str(args.chunk)+"_tmp.mp4")
         
-        print(str(time.time())+" (mel_b:"+str(len(mel_batch))+", img_b:"+str(len(img_batch))+")")
+        #print(str(time.time())+" (mel_b:"+str(len(mel_batch))+", img_b:"+str(len(img_batch))+")")
         # last run takes 0.14s if current_batch_size is different from previous. if current_batch_size == previous: inference takes just 0.01s
         if (len(mel_batch) < batch_size):
             padding_len = batch_size - len(mel_batch)
