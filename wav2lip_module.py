@@ -11,7 +11,6 @@ import platform, time
 import pickle
 from huggingface_hub import hf_hub_download
 from pathlib import Path
-import ffpyplayer
 import signal
 
 # future work
