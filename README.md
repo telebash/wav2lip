@@ -1,3 +1,7 @@
+### This is part of talk-llama-fast. Don't use installation guide at current page here, it is outdated and left for legacy. Full and actual instruction how to install is here: https://github.com/Mozer/talk-llama-fast
+
+Old and original readme:
+
 # **Wav2Lip**: *Accurately Lip-syncing Videos In The Wild*
 
 - slightly modified to run as a Silly Tavern extension by [Mozer](https://github.com/Mozer)
