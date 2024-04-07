@@ -209,7 +209,7 @@ def datagen(frames, mels, args):
     else:
         start_frame = 0
         print("Warning: source video is too short for smooth chunks playing. 60+ frames minimum")
-    print(str(time.time())+" Before face detection. start frame: "+str(start_frame)+", start_frame_global: "+str(start_frame_global))
+    #print(str(time.time())+" Before face detection. start frame: "+str(start_frame)+", start_frame_global: "+str(start_frame_global))
     if args.box[0] == -1:
         if not args.static:
             face_det_results = face_detect_with_cache(frames, args, os.path.basename(args.face), os.stat(args.face).st_size) # BGR2RGB for CNN face detection
@@ -297,7 +297,7 @@ def load_model(path, device="cpu"):
 
 def wav2lip_main(args):
    
-    print(str(time.time())+" wav2lip_main with file "+args.face)
+    #print(str(time.time())+" wav2lip_main with file "+args.face)
     #print(args)
     global device, model, full_frames_by_file
         
@@ -399,7 +399,7 @@ def wav2lip_main(args):
             if model is None:
                 #print ("Model is not loaded, loading...")
                 model = load_model(args.checkpoint_path, args.device)
-            print (str(time.time())+" Model loaded. Starting wav2lip inference.")
+            #print (str(time.time())+" Model loaded. Starting wav2lip inference.")
 
             frame_h, frame_w = full_frames[0].shape[:-1]
             # MPEG4-AVC. AVC1 may not work on all systems. try X264, AVC1, MP4V. On my system everything worked fine even without .dll, although VideoWriter was reporting errors.            
@@ -423,7 +423,7 @@ def wav2lip_main(args):
                 
         img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(args.device) # 0.001 s
         mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(args.device) # 0.001 s
-        print(str(time.time())+" before inference")
+        #print(str(time.time())+" before inference")
         
         # inference
         # 12 runs for a 7s audio and batch_size 16. larger batch_size needs more VRAM

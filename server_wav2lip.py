@@ -20,13 +20,13 @@ import time
 import pyaudio
 import wave
 import os
+import tempfile
 
 # globals
 pyaudio_p = None
 next_video_chunk_global = 1
 player_loop_running = 0.0
 os.environ["face_detect_running"] = "0"
-xtts_play_allowed_path = "c:\\DATA\\LLM\\xtts\\xtts_play_allowed.txt"
 
 wav2lip_is_busy = 0
 wav2lip_has_fresh_video = 0
@@ -57,7 +57,7 @@ print("Initializing wav2lip module")
 # @reply_part: 0 - it is the first audio for current text reply, for syncing
 def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", order="rand", chunk=0, reply_part=0):
 
-    global wav2lip_is_busy, wav2lip_has_fresh_video, wav2lip_next_chunk_to_gen, xtts_play_allowed_path, next_video_chunk_global, player_loop_running
+    global wav2lip_is_busy, wav2lip_has_fresh_video, wav2lip_next_chunk_to_gen, next_video_chunk_global, player_loop_running
     steps_tried = 0
     chunk = int(chunk)
     reply_part = int(reply_part)
@@ -93,7 +93,7 @@ def wav2lip_server_generate(char_folder="default", device="cpu", audio="test", o
     if (not wav2lip_is_busy and not int(os.environ["face_detect_running"])): 
         wav2lip_is_busy = 1
         
-        xtts_play_allowed = xtts_play_allowed_check(xtts_play_allowed_path)
+        xtts_play_allowed = xtts_play_allowed_check()
         if (xtts_play_allowed):        
             
             wav2lip_has_fresh_video = 0
@@ -253,29 +253,28 @@ def check_for_new_file(folder):
             return ""
     return ""  
 
-# reads file, it doesn't rewrite it anymore
-# @filename: full path to file
-# returns: 0 - stop, 1 - play allowed
-def xtts_play_allowed_check(filename="xtts_play_allowed.txt"):
-    #Check if 'xtts_play_allowed.txt' contains '0', stop streaming.
-    value = None
+def get_shared_temp_value():
+    file_path = os.path.join(tempfile.gettempdir(), "xtts_play_allowed.txt")
     try:
-        if not os.path.isfile(filename):
-            print("check_for_stop: File "+filename+" does not exist.")
-
-        else:
-            with open(filename, 'r') as fp:
-                value = int(fp.read().strip())     # Read the entire file and remove leading/trailing whitespace characters                
-            if value == 0:                         # If the file contains '0'
-                #with open(filename, 'w+') as fp:   # Reopen the file in writing mode ('w+')
-                #    fp.write('1\n')                # Reset the file contents to '1' (allowed)
-                print("Speech! Stream stopped.")
-                return 0
-    except Exception as e:
-        print(f"An error occurred: {e}")            
-        return 0
-        
-    return 1       
+        with open(file_path, "r") as file:
+            value = file.read().strip()
+        return value
+    except IOError:
+        print(f"Error reading from file: {file_path}")
+        return None
+    
+# NEW, temp/xtts_play_allowed.txt for '0' or '1'
+# @filename: not used, we store file in /temp
+# returns: int 0 - stop, 1 - play allowed
+def xtts_play_allowed_check():
+    #Check if var contains '0', stop streaming.
+    value = get_shared_temp_value()
+    if (value is None): # var not set
+        value = 1        
+    else:
+        value = int(value)        
+    
+    return value   
 
 # get all char folder with videos, sorted by date desc
 def wav2lip_server_get_chars_desc():
@@ -304,7 +303,7 @@ def wav2lip_server_generate_dummy():
 # wav2lip_has_fresh_video is a global flag: 0/1, set in wav2lip_server_generate()
 def wav2lip_server_play_init():
     
-    global wav2lip_has_fresh_video, xtts_play_allowed_path, next_video_chunk_global, player_loop_running
+    global wav2lip_has_fresh_video, next_video_chunk_global, player_loop_running
     
     player_loop_running = time.time()
     
@@ -338,7 +337,7 @@ def wav2lip_server_play_init():
                     print(str(time.time())+" calling play_video_with_audio: "+video_file_path+", next_video_chunk_global: "+str(next_video_chunk_global))
                     wav2lip_has_fresh_video = 0
                     
-                    xtts_play_allowed = xtts_play_allowed_check(xtts_play_allowed_path)
+                    xtts_play_allowed = xtts_play_allowed_check()
                     if (xtts_play_allowed): # call player                         
                         next_video_chunk_global = play_video_with_audio(video_file_path, audio_file_path, True, next_video_chunk_global, rand_caption)
                         print("done with play_video_with_audio, latest next_video_chunk_global to play: "+str(next_video_chunk_global))  
@@ -384,7 +383,7 @@ def wav2lip_server_play_init():
 # returns next chunk number to play, thay doesn't now (int)
 def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=0, caption='Video chat'):
     
-    global pyaudio_p, xtts_play_allowed_path, player_loop_running
+    global pyaudio_p, player_loop_running
     
     # async fix between video and audio, in bytes. 2400 bytes = 0.10s, can be negative. 
     #sync_audio_delta_bytes = 5000 # 5000 for bluetooth
@@ -433,7 +432,7 @@ def play_video_with_audio(video_file, audio_file, use_pyaudio=True, start_chunk=
         while True:
             
             if (step % 5 == 0): # check once in 0.15s
-                xtts_play_allowed = xtts_play_allowed_check(xtts_play_allowed_path)
+                xtts_play_allowed = xtts_play_allowed_check()
                 if (xtts_play_allowed == 0):
                     print("speech detected, play_video_with_audio stopped")
                     return current_chunk # won't play, exiting
