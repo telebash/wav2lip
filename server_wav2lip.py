@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_cors import CORS, cross_origin
 
-import modules.wav2lip.wav2lip_module as wav2lip_module
+import wav2lip_module as wav2lip_module
 import json, os, random, glob, time, re
 from pathlib import Path
 from types import SimpleNamespace

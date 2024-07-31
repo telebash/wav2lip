@@ -1,12 +1,12 @@
 from os import listdir, path
 import numpy as np
-import scipy, cv2, os, sys, argparse, modules.wav2lip.audio as audio
+import scipy, cv2, os, sys, argparse, audio as audio
 import json, subprocess, random, string
 from tqdm import tqdm
 from glob import glob
-import torch, modules.wav2lip.face_detection as face_detection
+import torch, face_detection as face_detection
 import torch.nn.functional as F
-from modules.wav2lip.models import Wav2Lip
+from models import Wav2Lip
 import platform, time
 import pickle
 from huggingface_hub import hf_hub_download
